@@ -12,11 +12,15 @@ main :: IO ()
 main = do
   (options, ()) <- simpleOptions
     $(simpleVersion Paths_github_folder_sync.version)
-    "Header for command line arguments"
-    "Program description, also for command line arguments"
+    "github-folder-sync"
+    "Sync repos and orgs from github to folder structures"
     (Options <$> switch ( long "verbose"
                  <> short 'v'
                  <> help "Verbose output?"
+                  )
+                  <*> strOption ( long "org"
+                  <> metavar "GITHUB_ORG"
+                  <> help "The github.com org to sync"
                   )
     )
     empty

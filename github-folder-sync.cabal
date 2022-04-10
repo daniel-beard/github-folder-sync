@@ -36,6 +36,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.11 && <10
+    , github
     , rio >=0.1.12.0
   default-language: Haskell2010
 
@@ -48,6 +49,7 @@ executable github-folder-sync-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.11 && <10
+    , github
     , github-folder-sync
     , optparse-simple
     , rio >=0.1.12.0
@@ -64,6 +66,7 @@ test-suite github-folder-sync-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.11 && <10
+    , github
     , github-folder-sync
     , hspec
     , rio >=0.1.12.0
