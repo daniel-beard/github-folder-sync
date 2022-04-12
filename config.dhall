@@ -6,8 +6,8 @@ let OrgConfig : Type
           , orgName : Text 
           }
 
-let config : List OrgConfig = [ 
+let orgConfigs : List OrgConfig = [
     { githubAPIEndpoint = None Text, orgName = "daniel-beard" } 
-    ]
+]
 
-in { config = config }
+in { orgConfigs = orgConfigs }

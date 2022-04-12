@@ -2,13 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Run (run) where
 
+import Dhall
 import Import
 import RIO.Process
 import GitHub (github')
 import GitHub
-
--- getReposRIO :: HasLogFunc env => RIO env ()
--- getReposRIO = getRepos
 
 getRepos :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env) => m ()
 getRepos = do
@@ -27,6 +25,8 @@ getRepoCount = do
 
 run :: RIO App ()
 run = do
+  config <- liftIO $ input auto "./config.dhall"
+  logInfo $ displayShow (config :: Config)
   getRepos 
   count <- getRepoCount
   logInfo $ displayShow count

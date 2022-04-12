@@ -1,8 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Types where
 
 import RIO
 import RIO.Process
+import Dhall (FromDhall)
 
 -- | Command line arguments
 data Options = Options
@@ -13,11 +15,18 @@ data Options = Options
 -- data OrgExclusion = ExcludeOlderThan
 
 data OrgConfig = OrgConfig
-  { isGithubCom :: !Bool
-  , githubAPIEndpoint :: String 
+  { githubAPIEndpoint :: Maybe String 
   , orgName :: String
   -- , folderNameOverride :: String
-  }
+  } deriving (Generic, Show)
+
+instance FromDhall OrgConfig
+
+data Config = Config
+  { orgConfigs :: Vector OrgConfig
+  } deriving (Generic, Show)
+
+instance FromDhall Config
 
 data App = App
   { appLogFunc :: !LogFunc
