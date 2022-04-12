@@ -3,9 +3,12 @@
 module Main (main) where
 
 import Import
+import Options.Applicative.Simple
 import Run
 import RIO.Process
-import Options.Applicative.Simple
+import System.Directory
+import System.FilePath
+
 import qualified Paths_github_folder_sync
 
 main :: IO ()

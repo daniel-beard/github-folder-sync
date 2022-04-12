@@ -24,6 +24,8 @@ dependencies:
 - rio >= 0.1.12.0
 - github
 - dhall
+- directory
+- filepath
 
 ghc-options:
 - -Wall
