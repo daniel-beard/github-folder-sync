@@ -10,26 +10,26 @@ import GitHub
 -- getReposRIO :: HasLogFunc env => RIO env ()
 -- getReposRIO = getRepos
 
-getRepos :: ( MonadReader env m
-     , MonadUnliftIO m
-     , HasLogFunc env) => RIO ()
+getRepos :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env) => m ()
 getRepos = do
-  possibleRepos <- github' GitHub.userReposR "daniel-beard" GitHub.RepoPublicityAll FetchAll
-  logInfo possibleRepos
-  -- case possibleRepos of
-  --      (Left error)  -> logError "Error: "
-  --      (Right repos) -> logInfo $ repos -- mapM_ (logInfo . formatRepo) repos
+  possibleRepos <- liftIO $ github' GitHub.userReposR "daniel-beard" GitHub.RepoPublicityAll FetchAll
+  case possibleRepos of
+       (Left error)  -> logError "Error: "
+       (Right repos) -> printRepos repos
+  where printRepos repos = mapM_ (logInfo . displayShow . repoCloneUrl) repos
 
--- formatRepo repo =
---   (unpack $ GitHub.untagName $ GitHub.repoName repo) ++ "\t"
-    -- (fromMaybe "" $ GitHub.repoDescription repo) ++ "\n"
-    -- (GitHub.repoHtmlUrl repo) ++ "\n" ++
-    -- (fromMaybe "" $ GitHub.repoCloneUrl repo) ++ "\t" ++
-    -- "watchers: " ++ (show $ GitHub.repoWatchersCount repo) ++ "\t" 
+getRepoCount :: (MonadReader env m, MonadUnliftIO m) => m Int
+getRepoCount = do
+  possibleRepos <- liftIO $ github' GitHub.userReposR "daniel-beard" GitHub.RepoPublicityAll FetchAll
+  case possibleRepos of
+       (Left error)  -> pure 0
+       (Right repos) -> pure $ length repos
 
 run :: RIO App ()
 run = do
-  getRepos
+  getRepos 
+  count <- getRepoCount
+  logInfo $ displayShow count
   proc "git" ["ls-files"] runProcess_
   -- logInfo output
   logInfo "We're inside the application!"

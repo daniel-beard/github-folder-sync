@@ -7,13 +7,16 @@ import RIO.Process
 -- | Command line arguments
 data Options = Options
   { optionsVerbose :: !Bool
-  , optionsGithubOrg :: !String
   }
 
--- Used for both github.com and enterprise.
-data GithubConfig = GithubConfig
-  { authToken :: !String,
-    apiEndpoint :: !String
+-- TODO: Think about this
+-- data OrgExclusion = ExcludeOlderThan
+
+data OrgConfig = OrgConfig
+  { isGithubCom :: !Bool
+  , githubAPIEndpoint :: String 
+  , orgName :: String
+  -- , folderNameOverride :: String
   }
 
 data App = App
@@ -21,16 +24,7 @@ data App = App
   , appProcessContext :: !ProcessContext
   , appOptions :: !Options
   -- Add other app-specific configuration information here
-  -- , githubConfig :: GithubConfig
   }
-
--- class HasAuthToken env where
---   authTokenG :: SimpleGetter env String 
-
--- instance HasAuthToken App where
---   authTokenG = to (authToken . githubConfig)
--- instance HasAuthToken GithubConfig where
---   authTokenG = to authToken
 
 instance HasLogFunc App where
   logFuncL = lens appLogFunc (\x y -> x { appLogFunc = y })

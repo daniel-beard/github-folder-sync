@@ -18,10 +18,10 @@ main = do
                  <> short 'v'
                  <> help "Verbose output?"
                   )
-                  <*> strOption ( long "org"
-                  <> metavar "GITHUB_ORG"
-                  <> help "The github.com org to sync"
-                  )
+                  -- <*> strOption ( long "org"
+                  -- <> metavar "GITHUB_ORG"
+                  -- <> help "The github.com org to sync"
+                  -- )
     )
     empty
   lo <- logOptionsHandle stderr (optionsVerbose options)

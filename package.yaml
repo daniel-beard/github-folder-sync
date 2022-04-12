@@ -2,9 +2,9 @@ name:                github-folder-sync
 version:             0.1.0.0
 github:              githubuser/github-folder-sync
 license:             BSD3
-author:              Author name here
+author:              Daniel Beard
 maintainer:          example@example.com
-copyright:           2022 Author name here
+copyright:           2022 Daniel Beard
 
 extra-source-files:
 - README.md
@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.11 && < 10
 - rio >= 0.1.12.0
 - github
+- dhall
 
 ghc-options:
 - -Wall
