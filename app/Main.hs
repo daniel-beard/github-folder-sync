@@ -6,9 +6,6 @@ import Import
 import Options.Applicative.Simple
 import Run
 import RIO.Process
-import System.Directory
-import System.FilePath
-
 import qualified Paths_github_folder_sync
 
 main :: IO ()
