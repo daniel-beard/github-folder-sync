@@ -32,6 +32,7 @@ data App = App
   { appLogFunc :: !LogFunc
   , appProcessContext :: !ProcessContext
   , appOptions :: !Options
+  , config :: Config
   -- Add other app-specific configuration information here
   }
 

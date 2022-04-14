@@ -30,5 +30,5 @@ run = do
   getRepos 
   count <- getRepoCount
   logInfo $ displayShow count
-  proc "git" ["ls-files"] runProcess_
+  -- proc "git" ["ls-files"] runProcess_
   logInfo "We're inside the application!"
