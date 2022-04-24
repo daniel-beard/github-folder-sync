@@ -10,4 +10,4 @@ let orgConfigs : List OrgConfig = [
     { githubAPIEndpoint = None Text, orgName = "daniel-beard" } 
 ]
 
-in { orgConfigs = orgConfigs }
+in { orgConfigs }

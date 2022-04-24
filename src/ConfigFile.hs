@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-module ConfigFile (configFileName, getConfig, findConfigFile) where
+module ConfigFile (configFileName, getConfig) where
 
 import Dhall
 import Import
@@ -12,14 +12,22 @@ import System.FilePath
 configFileName :: FilePath 
 configFileName = "config.dhall"
 
+-- Overridden for now for easier testing
 getConfig :: IO (Maybe Config)
 getConfig = do
-    configFile <- findConfigFile
-    case configFile of
-        Nothing -> return Nothing
-        Just file -> do
-          config <- input auto $ pack file 
-          return $ Just config
+  currDir <- getCurrentDirectory 
+  rawConfig <- detailed $ input auto $ pack $ currDir </> configFileName
+  return $ Just Config { configFile = rawConfig, topLevelDir = currDir </> "folder-sync" }
+
+-- getConfig :: IO (Maybe Config)
+-- getConfig = do
+--     maybeConfigFile <- findConfigFile
+--     case maybeConfigFile of
+--         Nothing -> return Nothing
+--         Just file -> do
+--           let configDirectory = takeDirectory  file
+--           rawConfig <- detailed $ input auto $ pack file 
+--           return $ Just Config { configFile = rawConfig, topLevelDir = configDirectory } 
 
 findConfigFile :: (MonadUnliftIO m) => m (Maybe FilePath)
 findConfigFile = do
