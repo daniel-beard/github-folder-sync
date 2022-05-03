@@ -21,7 +21,9 @@ description:         Please see the README on Github at <https://github.com/gith
 
 dependencies:
 - base >= 4.11 && < 10
+- bytestring
 - conduit
+- conduit-concurrent-map
 - conduit-extra
 - rio >= 0.1.12.0
 - github

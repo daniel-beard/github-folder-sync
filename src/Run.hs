@@ -11,6 +11,12 @@ import RIO.Directory
 import qualified RIO.Vector as V
 import System.FilePath
 
+import Data.Conduit
+import Data.Conduit.ConcurrentMap
+import qualified Data.Conduit.Process.Typed as PT
+import qualified Data.Conduit.List as CL
+import qualified Data.ByteString as B
+
 import RIO.Vector.Partial
 
 getRepos :: (MonadReader env m, MonadUnliftIO m) => m (Maybe (Vector Repo))
@@ -52,13 +58,13 @@ cloneSingleRepo orgDir repo = do
       Nothing -> return False
       Just sshURL -> do
         logInfo $ "Running: 'git clone " <> displayShow (unpack (getUrl sshURL)) <> "'"
-        proc "git" ["clone", unpack (getUrl sshURL)] runProcess_ 
+        RIO.Process.proc "git" ["clone", unpack (getUrl sshURL)] runProcess_
         return True
 
-cloneSingleOrgConfig :: (MonadReader env m,
-                                               MonadUnliftIO m,
-                                               HasProcessContext env,
-                                               HasLogFunc env) => FilePath -> OrgConfig -> m ()
+cloneSingleOrgConfig :: ( MonadReader env m,
+                          MonadUnliftIO m,
+                          HasProcessContext env,
+                          HasLogFunc env) => FilePath -> OrgConfig -> m ()
 cloneSingleOrgConfig topDir orgConfig = do
   let topLevelName = orgName orgConfig
   let orgDir = topDir </> topLevelName
@@ -79,8 +85,9 @@ cloneSingleOrgConfig topDir orgConfig = do
       logInfo "Filtered Repo names: "
       mapM_ (logInfo . displayShow . repoUrl) repos
 
-      --TODODB: Error handling and concurrency
-      mapM_ (cloneSingleRepo orgDir) repos
+      --TODODB: Error handling
+      res <- runConduitRes (CL.sourceList (toList repos) .| concurrentMapM_ 8 5 (\i -> cloneSingleRepo orgDir i) .| CL.consume ) 
+      logInfo $ displayShow res
 
       -- Restore dir
       setCurrentDirectory currDir
@@ -97,17 +104,28 @@ cloneSingleOrgConfig topDir orgConfig = do
 -- ensureConfigMatchesOnDiskFolders = do
 --   mapM_ 
 
-
+-- Just outputs the stderr when `cat`ing out a file path
+doConduit :: String -> IO [ByteString]
+doConduit fp = do
+  let pc = setStderr PT.createSource $ PT.proc "cat" [fp]
+  withProcessWait pc $ \p ->
+    runConduit (getStderr p .| CL.consume) <* waitExitCode p
 
 run :: RIO App ()
 run = do
   env <- ask
   let c = config env
-  logInfo $ displayShow c
+  -- logInfo $ displayShow c
+
+  -- cond <- liftIO $ doConduit "README.md"
+  -- logInfo $ displayShow cond
+
+  -- -- what happens if the file doesn't exist?
+  -- cond1 <- liftIO $ doConduit "blah.txt"
+  -- logInfo $ displayShow cond1
+
+  -- res <- liftIO $ runConduitRes (CL.sourceList ["README.md", "blah.txt"] .| concurrentMapM_ 4 4 (\i -> liftIO $ doConduit i) .| CL.consume ) 
+  -- logInfo $ displayShow res
 
   let firstConfig = head $ orgConfigs $ configFile c
   cloneSingleOrgConfig (topLevelDir c) firstConfig
-  -- orgOrUserRepos <- getReposForUserOrOrg "daniel-beard"
-  -- logInfo $ "Got result: " <> displayShow orgOrUserRepos
-  -- getRepos 
-  -- proc "git" ["ls-files"] runProcess_
