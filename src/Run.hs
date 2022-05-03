@@ -32,7 +32,7 @@ getReposForUserOrOrg orgOrUser = do
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
-                    HasLogFunc env) => FilePath -> Repo -> m ([ByteString], ExitCode) 
+                    HasLogFunc env) => FilePath -> Repo -> m ([ByteString], ExitCode)
 cloneSingleRepo orgDir repo = do
   createDirectoryIfMissing True orgDir
   setCurrentDirectory orgDir
@@ -77,26 +77,30 @@ cloneSingleOrgConfig topDir orgConfig = do
       let repos = V.filter (\r -> repoFork r /= Just True &&
                                 untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName) repos''
 
-      -- logInfo "Filtered Repo names: "
-      -- mapM_ (logInfo . displayShow . repoUrl) repos
-
-      let indexedRepos = getZipSource $ (,) 
+      let indexedRepos = getZipSource $ (,)
                             <$> ZipSource (yieldMany ([1..] :: [Int]))
                             <*> ZipSource (CL.sourceList (toList repos))
 
-      --TODODB: Error handling
-      res <- runConduitRes 
+      --TODODB: Test the error handling
+      res <- runConduitRes
                  $ indexedRepos
-                .| mapMC (\(idx, result) -> do 
+                .| mapMC (\(idx, result) -> do
                     logSticky $ "Cloning " <> displayShow idx <> "/" <> displayShow (length repos)
                     return result
                   )
-                .| concurrentMapM_ 8 5 (cloneSingleRepo orgDir) 
-                .| CL.consume 
-      logInfo $ displayShow res
+                .| concurrentMapM_ 8 5 (cloneSingleRepo orgDir)
+                .| mapMC (\(stderr', exitcode) -> do
+                    case exitcode of
+                      ExitSuccess -> return (stderr', exitcode)
+                      ExitFailure n -> do
+                        logError $ "FAILED w/code: " <> displayShow n
+                        logError $ displayShow (B.intercalate "\n" stderr')
+                        return (stderr', exitcode)
+                  )
+                .| CL.consume
 
+      --TODODB: Probably want to panic here if we have errors above?
       let errors = filter (\(_, exitcode) -> exitcode /= ExitSuccess) res
-      mapM_ (logError . displayShow . fst) errors
 
       -- Restore dir
       setCurrentDirectory currDir
