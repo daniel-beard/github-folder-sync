@@ -11,6 +11,7 @@ import RIO.Directory
 import qualified RIO.Vector as V
 import System.FilePath
 
+import Conduit
 import Data.Conduit
 import Data.Conduit.ConcurrentMap
 import qualified Data.Conduit.Process.Typed as PT
@@ -18,14 +19,6 @@ import qualified Data.Conduit.List as CL
 import qualified Data.ByteString as B
 
 import RIO.Vector.Partial
-
-getRepos :: (MonadReader env m, MonadUnliftIO m) => m (Maybe (Vector Repo))
-getRepos = do
-  possibleRepos <- liftIO $ github' GitHub.userReposR "daniel-beard" GitHub.RepoPublicityAll FetchAll
-  case possibleRepos of
-       (Left _)  -> return Nothing
-       (Right repos) -> return $ Just repos
-  -- where printRepos repos = mapM_ (logInfo . displayShow . repoCloneUrl) repos
 
 getReposForUserOrOrg :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env) => String -> m (Maybe (Vector Repo))
 getReposForUserOrOrg orgOrUser = do
@@ -41,7 +34,6 @@ cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
                     HasLogFunc env) => FilePath -> Repo -> m ([ByteString], ExitCode) 
 cloneSingleRepo orgDir repo = do
-  logInfo $ "Ensuring directory exists: " <> displayShow orgDir
   createDirectoryIfMissing True orgDir
   setCurrentDirectory orgDir
   -- Check if the repo folder exists, if not clone it
@@ -61,6 +53,8 @@ cloneSingleRepo orgDir repo = do
         withProcessWait pc $ \p ->
           runConduit (getStderr p .| CL.consume) `concurrently`
           runConduit (waitExitCode p)
+
+
 
 cloneSingleOrgConfig :: ( MonadReader env m,
                           MonadUnliftIO m,
@@ -86,8 +80,19 @@ cloneSingleOrgConfig topDir orgConfig = do
       -- logInfo "Filtered Repo names: "
       -- mapM_ (logInfo . displayShow . repoUrl) repos
 
+      let indexedRepos = getZipSource $ (,) 
+                            <$> ZipSource (yieldMany ([1..] :: [Int]))
+                            <*> ZipSource (CL.sourceList (toList repos))
+
       --TODODB: Error handling
-      res <- runConduitRes (CL.sourceList (toList repos) .| concurrentMapM_ 8 5 (\i -> cloneSingleRepo orgDir i) .| CL.consume ) 
+      res <- runConduitRes 
+                 $ indexedRepos
+                .| mapMC (\(idx, result) -> do 
+                    logSticky $ "Cloning " <> displayShow idx <> "/" <> displayShow (length repos)
+                    return result
+                  )
+                .| concurrentMapM_ 8 5 (cloneSingleRepo orgDir) 
+                .| CL.consume 
       logInfo $ displayShow res
 
       let errors = filter (\(_, exitcode) -> exitcode /= ExitSuccess) res
