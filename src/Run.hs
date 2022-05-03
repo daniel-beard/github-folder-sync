@@ -39,8 +39,7 @@ getReposForUserOrOrg orgOrUser = do
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
-                    HasProcessContext env,
-                    HasLogFunc env) => FilePath -> Repo -> m Bool
+                    HasLogFunc env) => FilePath -> Repo -> m ([ByteString], ExitCode) 
 cloneSingleRepo orgDir repo = do
   logInfo $ "Ensuring directory exists: " <> displayShow orgDir
   createDirectoryIfMissing True orgDir
@@ -52,18 +51,19 @@ cloneSingleRepo orgDir repo = do
   let cloneSshURL = repoSshUrl repo
   if repoGitFolderExists then do
     logInfo $ "Skipping: looks like there's already a git repo at: " <> displayShow repoGitFolder
-    return False
+    return ([], ExitSuccess)
   else
     case cloneSshURL of
-      Nothing -> return False
+      Nothing -> return ([], ExitSuccess)
       Just sshURL -> do
         logInfo $ "Running: 'git clone " <> displayShow (unpack (getUrl sshURL)) <> "'"
-        RIO.Process.proc "git" ["clone", unpack (getUrl sshURL)] runProcess_
-        return True
+        let pc = setStderr PT.createSource $ PT.proc "git" ["clone", unpack (getUrl sshURL)]
+        withProcessWait pc $ \p ->
+          runConduit (getStderr p .| CL.consume) `concurrently`
+          runConduit (waitExitCode p)
 
 cloneSingleOrgConfig :: ( MonadReader env m,
                           MonadUnliftIO m,
-                          HasProcessContext env,
                           HasLogFunc env) => FilePath -> OrgConfig -> m ()
 cloneSingleOrgConfig topDir orgConfig = do
   let topLevelName = orgName orgConfig
@@ -83,15 +83,19 @@ cloneSingleOrgConfig topDir orgConfig = do
       let repos = V.filter (\r -> repoFork r /= Just True &&
                                 untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName) repos''
 
-      logInfo "Filtered Repo names: "
-      mapM_ (logInfo . displayShow . repoUrl) repos
+      -- logInfo "Filtered Repo names: "
+      -- mapM_ (logInfo . displayShow . repoUrl) repos
 
       --TODODB: Error handling
       res <- runConduitRes (CL.sourceList (toList repos) .| concurrentMapM_ 8 5 (\i -> cloneSingleRepo orgDir i) .| CL.consume ) 
       logInfo $ displayShow res
 
+      let errors = filter (\(_, exitcode) -> exitcode /= ExitSuccess) res
+      mapM_ (logError . displayShow . fst) errors
+
       -- Restore dir
       setCurrentDirectory currDir
+      logStickyDone ""
       return ()
 
 

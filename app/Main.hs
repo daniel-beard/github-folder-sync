@@ -20,10 +20,6 @@ main = do
                  <> short 'v'
                  <> help "Verbose output?"
                   )
-                  -- <*> strOption ( long "org"
-                  -- <> metavar "GITHUB_ORG"
-                  -- <> help "The github.com org to sync"
-                  -- )
     )
     empty
   maybeConfig <- getConfig 
