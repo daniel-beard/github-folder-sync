@@ -16,8 +16,8 @@ configFileName = "config.dhall"
 getConfig :: IO (Maybe Config)
 getConfig = do
   currDir <- getCurrentDirectory 
-  rawConfig <- detailed $ input auto $ pack $ currDir </> configFileName
-  return $ Just Config { configFile = rawConfig, topLevelDir = currDir </> "folder-sync" }
+  rawConfig <- detailed $ input auto $ pack $ currDir </> ".." </> "folder-sync" </> configFileName
+  return $ Just Config { configFile = rawConfig, topLevelDir = currDir </> ".." </> "folder-sync" }
 
 -- getConfig :: IO (Maybe Config)
 -- getConfig = do

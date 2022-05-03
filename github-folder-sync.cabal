@@ -37,6 +37,8 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.11 && <10
+    , conduit
+    , conduit-extra
     , dhall
     , directory
     , filepath
@@ -53,6 +55,8 @@ executable github-folder-sync-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.11 && <10
+    , conduit
+    , conduit-extra
     , dhall
     , directory
     , filepath
@@ -73,6 +77,8 @@ test-suite github-folder-sync-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.11 && <10
+    , conduit
+    , conduit-extra
     , dhall
     , directory
     , filepath

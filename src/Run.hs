@@ -55,11 +55,11 @@ cloneSingleRepo orgDir repo = do
         proc "git" ["clone", unpack (getUrl sshURL)] runProcess_ 
         return True
 
-ensureSingleOrgConfigMatchesOnDiskContents :: (MonadReader env m,
+cloneSingleOrgConfig :: (MonadReader env m,
                                                MonadUnliftIO m,
                                                HasProcessContext env,
                                                HasLogFunc env) => FilePath -> OrgConfig -> m ()
-ensureSingleOrgConfigMatchesOnDiskContents topDir orgConfig = do
+cloneSingleOrgConfig topDir orgConfig = do
   let topLevelName = orgName orgConfig
   let orgDir = topDir </> topLevelName
   logInfo $ displayShow orgDir
@@ -106,7 +106,7 @@ run = do
   logInfo $ displayShow c
 
   let firstConfig = head $ orgConfigs $ configFile c
-  ensureSingleOrgConfigMatchesOnDiskContents (topLevelDir c) firstConfig
+  cloneSingleOrgConfig (topLevelDir c) firstConfig
   -- orgOrUserRepos <- getReposForUserOrOrg "daniel-beard"
   -- logInfo $ "Got result: " <> displayShow orgOrUserRepos
   -- getRepos 
