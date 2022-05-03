@@ -72,6 +72,7 @@ cloneSingleOrgConfig topDir orgConfig = do
   currDir <- getCurrentDirectory
   repos' <- getReposForUserOrOrg topLevelName
 
+  logSticky $ "Cloning the contents of: " <> displayShow topLevelName
   case repos' of
     Nothing -> return ()
     Just repos'' -> do
@@ -104,28 +105,11 @@ cloneSingleOrgConfig topDir orgConfig = do
 -- ensureConfigMatchesOnDiskFolders = do
 --   mapM_ 
 
--- Just outputs the stderr when `cat`ing out a file path
-doConduit :: String -> IO [ByteString]
-doConduit fp = do
-  let pc = setStderr PT.createSource $ PT.proc "cat" [fp]
-  withProcessWait pc $ \p ->
-    runConduit (getStderr p .| CL.consume) <* waitExitCode p
-
 run :: RIO App ()
 run = do
   env <- ask
   let c = config env
   -- logInfo $ displayShow c
-
-  -- cond <- liftIO $ doConduit "README.md"
-  -- logInfo $ displayShow cond
-
-  -- -- what happens if the file doesn't exist?
-  -- cond1 <- liftIO $ doConduit "blah.txt"
-  -- logInfo $ displayShow cond1
-
-  -- res <- liftIO $ runConduitRes (CL.sourceList ["README.md", "blah.txt"] .| concurrentMapM_ 4 4 (\i -> liftIO $ doConduit i) .| CL.consume ) 
-  -- logInfo $ displayShow res
 
   let firstConfig = head $ orgConfigs $ configFile c
   cloneSingleOrgConfig (topLevelDir c) firstConfig
