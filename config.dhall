@@ -3,11 +3,16 @@
 
 let OrgConfig : Type
         = { githubAPIEndpoint : Optional Text
+          , githubAPIToken : Optional Text
           , orgName : Text 
+          , ignoringRepos : List Text
           }
 
 let orgConfigs : List OrgConfig = [
-    { githubAPIEndpoint = None Text, orgName = "daniel-beard" } 
+    { githubAPIEndpoint = None Text
+    , githubAPIToken = None Text
+    , orgName = "daniel-beard" 
+    , ignoringRepos = ["Chippy"] } 
 ]
 
 in { orgConfigs }

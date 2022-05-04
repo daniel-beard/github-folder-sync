@@ -97,12 +97,15 @@ cloneSingleOrgConfig topDir orgConfig = do
   case repos' of
     Nothing -> return ()
     Just repos'' -> do
-      -- Filtering out following for now:
-      --   - Forks
-      --   - Anything where the SimpleOwnerLogin doesn't match the orgName for the given config
-      --      - This happens for things like when a user is an owner of a repo in another org.
-      let repos = V.filter (\r -> repoFork r /= Just True &&
-                                untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName) repos''
+      -- Filter repos
+      let repos = V.filter (\r -> 
+                                  -- Forks
+                                  repoFork r /= Just True 
+                                  -- Owner login name /= orgName - like when a user is an owner of a repo in another org.
+                                  && untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName 
+                                  -- Ignore list in config
+                                  && notElem (unpack (untagName $ repoName r)) (ignoringRepos orgConfig)
+                                ) repos'' 
 
       let indexedRepos = getZipSource $ (,)
                             <$> ZipSource (yieldMany ([1..] :: [Int]))

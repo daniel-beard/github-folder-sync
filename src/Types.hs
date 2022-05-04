@@ -20,6 +20,7 @@ data OrgConfig = OrgConfig
   { githubAPIEndpoint :: Maybe String 
   , githubAPIToken :: Maybe String
   , orgName :: String
+  , ignoringRepos :: Vector String
   -- , folderNameOverride :: String
   } deriving (Generic, Show)
 instance FromDhall OrgConfig
