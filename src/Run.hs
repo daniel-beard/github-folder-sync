@@ -3,25 +3,25 @@
 module Run (run) where
 
 import Import
-import RIO.Process
-import RIO.Text hiding (length, filter)
-import GitHub (github')
-import GitHub
-import RIO.Directory
-import qualified RIO.Vector as V
-import System.FilePath
-
 import Conduit
-import Data.Conduit
 import Data.Conduit.ConcurrentMap
 import qualified Data.Conduit.Process.Typed as PT
 import qualified Data.Conduit.List as CL
 import qualified Data.ByteString as B
+import GitHub
+import RIO.Process
+import RIO.Text hiding (length, filter)
+import RIO.Directory
+import qualified RIO.Vector as V
+import System.FilePath
+
 
 import RIO.Vector.Partial
 
-getReposForUserOrOrg :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env) => String -> m (Maybe (Vector Repo))
-getReposForUserOrOrg orgOrUser = do
+getReposForUserOrOrgGithubCom :: (MonadReader env m,
+                                  MonadUnliftIO m,
+                                  HasLogFunc env) => String -> m (Maybe (Vector Repo))
+getReposForUserOrOrgGithubCom orgOrUser = do
   -- This endpoint returns repos for either user or org, and has enough info that we can use it.
   possibleRepos <- liftIO $ github' GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
   case possibleRepos of
@@ -29,6 +29,31 @@ getReposForUserOrOrg orgOrUser = do
       logInfo $ displayShow err
       return Nothing
     (Right repos) -> return $ Just repos
+
+getReposForUserOrOrgGithubEnterprise :: (MonadReader env m,
+                                         MonadUnliftIO m,
+                                         HasLogFunc env) => String -> OrgConfig -> m (Maybe (Vector Repo))
+getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig = do
+  -- This endpoint returns repos for either user or org, and has enough info that we can use it.
+  -- possibleRepos <- liftIO $ github' GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
+  possibleRepos <- liftIO $ github
+                  (GitHub.EnterpriseOAuth
+                    (fromString $ fromMaybe "" $ githubAPIEndpoint orgConfig)
+                    (fromString $ fromMaybe "" $ githubAPIToken orgConfig)
+                  ) GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
+  case possibleRepos of
+    (Left err) -> do
+      logInfo $ displayShow err
+      return Nothing
+    (Right repos) -> return $ Just repos
+
+getReposForUserOrOrg :: (MonadReader env m,
+                         MonadUnliftIO m,
+                         HasLogFunc env) => String -> OrgConfig -> m (Maybe (Vector Repo))
+getReposForUserOrOrg orgOrUser orgConfig = do
+  case (githubAPIEndpoint orgConfig) of
+    Nothing -> getReposForUserOrOrgGithubCom orgOrUser
+    Just apiEndpoint -> getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig 
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
@@ -64,7 +89,9 @@ cloneSingleOrgConfig topDir orgConfig = do
   let orgDir = topDir </> topLevelName
   logInfo $ displayShow orgDir
   currDir <- getCurrentDirectory
-  repos' <- getReposForUserOrOrg topLevelName
+
+  --
+  repos' <- getReposForUserOrOrg topLevelName orgConfig
 
   logSticky $ "Cloning the contents of: " <> displayShow topLevelName
   case repos' of
@@ -91,16 +118,16 @@ cloneSingleOrgConfig topDir orgConfig = do
                 .| concurrentMapM_ 8 5 (cloneSingleRepo orgDir)
                 .| mapMC (\(stderr', exitcode) -> do
                     case exitcode of
-                      ExitSuccess -> return (stderr', exitcode)
+                      ExitSuccess -> return exitcode
                       ExitFailure n -> do
                         logError $ "FAILED w/code: " <> displayShow n
-                        logError $ displayShow (B.intercalate "\n" stderr')
-                        return (stderr', exitcode)
+                        logError $ displayShow $ decodeUtf8With lenientDecode $ B.intercalate "\n" stderr'
+                        return exitcode
                   )
                 .| CL.consume
 
       --TODODB: Probably want to panic here if we have errors above?
-      let errors = filter (\(_, exitcode) -> exitcode /= ExitSuccess) res
+      let errors = filter (/= ExitSuccess) res
 
       -- Restore dir
       setCurrentDirectory currDir

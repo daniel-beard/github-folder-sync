@@ -15,8 +15,10 @@ data Options = Options
 -- data OrgExclusion = ExcludeOlderThan
 
 -- Sub configs that get loaded from the config file
+-- We assume that any config containing a githubAPIEndpoint value is Enterprise (for now)
 data OrgConfig = OrgConfig
   { githubAPIEndpoint :: Maybe String 
+  , githubAPIToken :: Maybe String
   , orgName :: String
   -- , folderNameOverride :: String
   } deriving (Generic, Show)

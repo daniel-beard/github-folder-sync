@@ -10,8 +10,9 @@ test -d "../folder-sync" && {
 # Create the folder again
 mkdir ../folder-sync
 
-# Copy our config file
-cp config.dhall ../folder-sync
+# Copy our config file (from the folder above us)
+# Setup this way for now to avoid me leaking any URLs or creds.
+cp ../config.dhall ../folder-sync
 
 # Run
 time stack run
