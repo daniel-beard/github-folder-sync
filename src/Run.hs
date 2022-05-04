@@ -115,7 +115,7 @@ cloneSingleOrgConfig topDir orgConfig = do
                     logSticky $ "Cloning " <> displayShow idx <> "/" <> displayShow (length repos)
                     return result
                   )
-                .| concurrentMapM_ 8 5 (cloneSingleRepo orgDir)
+                .| concurrentMapM_ 8 10 (cloneSingleRepo orgDir)
                 .| mapMC (\(stderr', exitcode) -> do
                     case exitcode of
                       ExitSuccess -> return exitcode

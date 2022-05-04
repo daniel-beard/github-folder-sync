@@ -26,3 +26,8 @@ time stack run
 # real    0m20.179s
 # user    0m4.287s
 # sys     0m2.253s
+
+# concurrentMapM_ 8 10 - enterprise test 1 - all repos
+# real	11m51.088s
+# user	9m31.721s
+# sys	2m39.496s
