@@ -15,9 +15,6 @@ import RIO.Directory
 import qualified RIO.Vector as V
 import System.FilePath
 
-
-import RIO.Vector.Partial
-
 getReposForUserOrOrgGithubCom :: (MonadReader env m,
                                   MonadUnliftIO m,
                                   HasLogFunc env) => String -> m (Maybe (Vector Repo))
@@ -48,13 +45,17 @@ getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig = do
     (Right repos) -> return $ Just repos
 
 -- Call this one, it handles both github.com and GHE
-getReposForUserOrOrg :: (MonadReader env m,
+getReposForOrgConfig :: (MonadReader env m,
                          MonadUnliftIO m,
-                         HasLogFunc env) => OrgConfig -> m (Maybe (Vector Repo))
-getReposForUserOrOrg orgConfig = do
+                         HasLogFunc env) => OrgConfig -> m (Maybe (Vector Repo), OrgConfig)
+getReposForOrgConfig orgConfig = do
   case githubAPIEndpoint orgConfig of
-    Nothing -> getReposForUserOrOrgGithubCom (orgName orgConfig)
-    Just _ -> getReposForUserOrOrgGithubEnterprise (orgName orgConfig) orgConfig
+    Nothing -> do
+      repos <- getReposForUserOrOrgGithubCom (orgName orgConfig)
+      return (repos, orgConfig)
+    Just _ -> do
+      repos <- getReposForUserOrOrgGithubEnterprise (orgName orgConfig) orgConfig
+      return (repos, orgConfig)
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
@@ -81,21 +82,20 @@ cloneSingleRepo orgDir repo = do
           runConduit (waitExitCode p)
 
 
-
 cloneSingleOrgConfig :: ( MonadReader env m,
                           MonadUnliftIO m,
-                          HasLogFunc env) => FilePath -> OrgConfig -> m ()
-cloneSingleOrgConfig topDir orgConfig = do
+                          HasLogFunc env) => FilePath -> Maybe (Vector Repo) -> OrgConfig -> m ()
+cloneSingleOrgConfig topDir maybeRepos orgConfig = do
   let topLevelName = orgName orgConfig
   let orgDir = topDir </> topLevelName
-  logInfo $ displayShow orgDir
-  currDir <- getCurrentDirectory
 
-  --
-  repos' <- getReposForUserOrOrg orgConfig
+  -- Get relative to current working dir
+  currDir <- liftIO $ getCurrentDirectory 
+  let relativeOrgDir = makeRelative currDir orgDir
+  logInfo $ displayShow relativeOrgDir
 
   logSticky $ "Cloning the contents of: " <> displayShow topLevelName
-  case repos' of
+  case maybeRepos of
     Nothing -> return ()
     Just repos'' -> do
       -- Filter repos
@@ -132,35 +132,40 @@ cloneSingleOrgConfig topDir orgConfig = do
 
       --TODODB: Probably want to panic here if we have errors above?
       let errors = filter (/= ExitSuccess) res
+      unless (length errors == 0) (error $ "Failed cloning org")
 
       -- Restore dir
       setCurrentDirectory currDir
       logStickyDone ""
       return ()
 
-
--- TODODB: Need the enterprise version of above
-
 -- for orgs in config, get repos, pick first one for now
 -- if the dir doesn't exist, clone the repo, otherwise warn and skip
 cloneConfigs :: (MonadReader env m,
                  MonadUnliftIO m,
-                 HasLogFunc env) => Vector OrgConfig -> m ()
-cloneConfigs orgConfigs = do
+                 HasLogFunc env) => FilePath -> Vector OrgConfig -> m ()
+cloneConfigs topDir orgConfigs' = do
   -- First, we want to request all the repos upfront from all configs
   let indexedConfigs = getZipSource $ (,)
                           <$> ZipSource (yieldMany ([1..] :: [Int]))
-                          <*> ZipSource (CL.sourceList (toList orgConfigs))
-  res <- runConduitRes
+                          <*> ZipSource (CL.sourceList (toList orgConfigs'))
+  _ <- runConduitRes
               $ indexedConfigs
+              -- Log sticky
               .| mapMC (\(idx, orgConfig) -> do
-                  logSticky $ "Fetching Config Repos " <> displayShow idx <> "/" <> displayShow (length orgConfigs)
+                  logSticky $ "Fetching Config Repos " <> displayShow idx <> "/" <> displayShow (length orgConfigs')
                   return orgConfig
                 )
-              .| concurrentMapM_ 8 10 getReposForUserOrOrg
+              -- Fetch list of repos
+              .| concurrentMapM_ 8 10 getReposForOrgConfig
+              -- Each thing coming through here should be (Maybe (Vector Repo), OrgConfig)
+              -- So now we should just be able to hand this off to cloneSingleOrgConfig. Run one at a time, but internally concurrent.
+              .| mapMC (\(maybeRepos, orgConfig) -> do
+                  cloneSingleOrgConfig topDir maybeRepos orgConfig
+                )
               .| CL.consume
 
-  logInfo $ displayShow res
+  logSticky $ "All Done!!"
 
 
 run :: RIO App ()
@@ -168,5 +173,4 @@ run = do
   env <- ask
   let c = config env
 
-  let firstConfig = head $ orgConfigs $ configFile c
-  cloneSingleOrgConfig (topLevelDir c) firstConfig
+  cloneConfigs (topLevelDir c) (orgConfigs (configFile c))
