@@ -47,13 +47,14 @@ getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig = do
       return Nothing
     (Right repos) -> return $ Just repos
 
+-- Call this one, it handles both github.com and GHE
 getReposForUserOrOrg :: (MonadReader env m,
                          MonadUnliftIO m,
-                         HasLogFunc env) => String -> OrgConfig -> m (Maybe (Vector Repo))
-getReposForUserOrOrg orgOrUser orgConfig = do
-  case (githubAPIEndpoint orgConfig) of
-    Nothing -> getReposForUserOrOrgGithubCom orgOrUser
-    Just apiEndpoint -> getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig 
+                         HasLogFunc env) => OrgConfig -> m (Maybe (Vector Repo))
+getReposForUserOrOrg orgConfig = do
+  case githubAPIEndpoint orgConfig of
+    Nothing -> getReposForUserOrOrgGithubCom (orgName orgConfig)
+    Just _ -> getReposForUserOrOrgGithubEnterprise (orgName orgConfig) orgConfig
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
@@ -91,21 +92,21 @@ cloneSingleOrgConfig topDir orgConfig = do
   currDir <- getCurrentDirectory
 
   --
-  repos' <- getReposForUserOrOrg topLevelName orgConfig
+  repos' <- getReposForUserOrOrg orgConfig
 
   logSticky $ "Cloning the contents of: " <> displayShow topLevelName
   case repos' of
     Nothing -> return ()
     Just repos'' -> do
       -- Filter repos
-      let repos = V.filter (\r -> 
+      let repos = V.filter (\r ->
                                   -- Forks
-                                  repoFork r /= Just True 
+                                  repoFork r /= Just True
                                   -- Owner login name /= orgName - like when a user is an owner of a repo in another org.
-                                  && untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName 
+                                  && untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName
                                   -- Ignore list in config
                                   && notElem (unpack (untagName $ repoName r)) (ignoringRepos orgConfig)
-                                ) repos'' 
+                                ) repos''
 
       let indexedRepos = getZipSource $ (,)
                             <$> ZipSource (yieldMany ([1..] :: [Int]))
@@ -142,17 +143,30 @@ cloneSingleOrgConfig topDir orgConfig = do
 
 -- for orgs in config, get repos, pick first one for now
 -- if the dir doesn't exist, clone the repo, otherwise warn and skip
+cloneConfigs :: (MonadReader env m,
+                 MonadUnliftIO m,
+                 HasLogFunc env) => Vector OrgConfig -> m ()
+cloneConfigs orgConfigs = do
+  -- First, we want to request all the repos upfront from all configs
+  let indexedConfigs = getZipSource $ (,)
+                          <$> ZipSource (yieldMany ([1..] :: [Int]))
+                          <*> ZipSource (CL.sourceList (toList orgConfigs))
+  res <- runConduitRes
+              $ indexedConfigs
+              .| mapMC (\(idx, orgConfig) -> do
+                  logSticky $ "Fetching Config Repos " <> displayShow idx <> "/" <> displayShow (length orgConfigs)
+                  return orgConfig
+                )
+              .| concurrentMapM_ 8 10 getReposForUserOrOrg
+              .| CL.consume
 
+  logInfo $ displayShow res
 
--- ensureConfigMatchesOnDiskFolders :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env) => m ()
--- ensureConfigMatchesOnDiskFolders = do
---   mapM_ 
 
 run :: RIO App ()
 run = do
   env <- ask
   let c = config env
-  -- logInfo $ displayShow c
 
   let firstConfig = head $ orgConfigs $ configFile c
   cloneSingleOrgConfig (topLevelDir c) firstConfig
