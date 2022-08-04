@@ -112,7 +112,6 @@ cloneSingleOrgConfig topDir maybeRepos orgConfig = do
                             <$> ZipSource (yieldMany ([1..] :: [Int]))
                             <*> ZipSource (CL.sourceList (toList repos))
 
-      --TODODB: Test the error handling
       res <- runConduitRes
                  $ indexedRepos
                 .| mapMC (\(idx, result) -> do
@@ -130,9 +129,8 @@ cloneSingleOrgConfig topDir maybeRepos orgConfig = do
                   )
                 .| CL.consume
 
-      --TODODB: Probably want to panic here if we have errors above?
       let errors = filter (/= ExitSuccess) res
-      unless (length errors == 0) (error $ "Failed cloning org")
+      unless (length errors == 0) (error "Failed cloning org")
 
       -- Restore dir
       setCurrentDirectory currDir
@@ -165,7 +163,7 @@ cloneConfigs topDir orgConfigs' = do
                 )
               .| CL.consume
 
-  logSticky $ "All Done!!"
+  logSticky "All Done!!"
 
 
 run :: RIO App ()

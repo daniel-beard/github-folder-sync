@@ -8,27 +8,28 @@ import RIO.Text hiding (all)
 import System.Directory
 import System.FilePath
 
---TODO: Change this filename
 configFileName :: FilePath 
-configFileName = "config.dhall"
+configFileName = ".github-folder-sync"
 
--- Overridden for now for easier testing
-getConfig :: IO (Maybe Config)
-getConfig = do
-  currDir <- getCurrentDirectory 
-  rawConfig <- detailed $ input auto $ pack $ currDir </> ".." </> "folder-sync" </> configFileName
-  return $ Just Config { configFile = rawConfig, topLevelDir = currDir </> ".." </> "folder-sync" }
-
+-- Uncomment for testing
 -- getConfig :: IO (Maybe Config)
 -- getConfig = do
---     maybeConfigFile <- findConfigFile
---     case maybeConfigFile of
---         Nothing -> return Nothing
---         Just file -> do
---           let configDirectory = takeDirectory  file
---           rawConfig <- detailed $ input auto $ pack file 
---           return $ Just Config { configFile = rawConfig, topLevelDir = configDirectory } 
+--   currDir <- getCurrentDirectory 
+--   rawConfig <- detailed $ input auto $ pack $ currDir </> ".." </> "folder-sync" </> configFileName
+--   return $ Just Config { configFile = rawConfig, topLevelDir = currDir </> ".." </> "folder-sync" }
 
+getConfig :: IO (Maybe Config)
+getConfig = do
+    maybeConfigFile <- findConfigFile
+    case maybeConfigFile of
+        Nothing -> return Nothing
+        Just file -> do
+          let configDirectory = takeDirectory  file
+          rawConfig <- detailed $ input auto $ pack file 
+          return $ Just Config { configFile = rawConfig, topLevelDir = configDirectory } 
+
+-- Config file has 'package.json'-like resolution rules.
+-- i.e. we traverse up directories until we find a config file, starting from working directory
 findConfigFile :: (MonadUnliftIO m) => m (Maybe FilePath)
 findConfigFile = do
   currDir <- liftIO getCurrentDirectory
@@ -44,5 +45,4 @@ findConfigFile = do
           if exists then return $ Just x else return Nothing
         firstMaybeConfigFile (x:xs) = do
           exists <- doesFileExist x
-          if exists then return $ Just x
-          else firstMaybeConfigFile xs
+          if exists then return $ Just x else firstMaybeConfigFile xs

@@ -1,10 +1,39 @@
 # github-folder-sync
 
+An easy, fast way to clone many github repositories concurrently by org name, for `github.com` or `GitHub Enterprise`.
+
 ## Execute  
 
-* Run `stack exec -- github-folder-sync-exe` to see "We're inside the application!"
-* With `stack exec -- github-folder-sync-exe --verbose` you will see the same message, with more logging.
+* Run `stack run`
 
-## Run tests
+## Config
 
-`stack test`
+The configuration is specified as a [Dhall](https://learnxinyminutes.com/docs/dhall/) configuration file named `.github-folder-sync`. The config resolution works much the same way as npm `package.json` resolution does, i.e. we check the current folder, then traverse up each path component until we find a config file.
+
+A minimal configuration looks like this:
+
+```dhall
+let orgConfigs = [
+    { githubAPIEndpoint = None Text
+    , githubAPIToken = None Text
+    , orgName = "daniel-beard" 
+    , ignoringRepos = ["nothing"]
+    } 
+]
+
+in { orgConfigs }
+```
+
+- The api endpoint is assumed to point at `github.com` unless it contains a value.
+
+The type of the configuration is (`.github-folder-sync`):
+
+```dhall
+let OrgConfig : Type
+        = { githubAPIEndpoint : Optional Text
+          , githubAPIToken : Optional Text
+          , orgName : Text 
+          , ignoringRepos : List Text
+          }
+let orgConfigs : List OrgConfig = [...]
+```

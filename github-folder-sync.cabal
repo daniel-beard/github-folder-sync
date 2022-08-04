@@ -29,7 +29,6 @@ library
       Import
       Run
       Types
-      Util
   other-modules:
       Paths_github_folder_sync
   hs-source-dirs:
@@ -74,7 +73,6 @@ test-suite github-folder-sync-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      UtilSpec
       Paths_github_folder_sync
   hs-source-dirs:
       test

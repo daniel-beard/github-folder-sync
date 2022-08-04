@@ -4,3 +4,7 @@ tarballs/
 .stack-work/
 
 folder-sync
+folder-sync-old
+dist-newstyle/
+
+.DS_Store
