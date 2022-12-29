@@ -45,7 +45,28 @@ data App = App
   -- Add other app-specific configuration information here
   }
 
+-- Lenses
+------------------------------------------------------------------------------------
+
 instance HasLogFunc App where
   logFuncL = lens appLogFunc (\x y -> x { appLogFunc = y })
 instance HasProcessContext App where
   processContextL = lens appProcessContext (\x y -> x { appProcessContext = y })
+
+configFileL :: Lens' Config ConfigFile
+configFileL = lens configFile (\c cf -> c { configFile = cf })
+
+orgConfigsL :: Lens' ConfigFile (Vector OrgConfig)
+orgConfigsL = lens orgConfigs (\c n -> c { orgConfigs = n })
+
+githubAPIEndpointL :: Lens' OrgConfig (Maybe String)
+githubAPIEndpointL = lens githubAPIEndpoint (\o e -> o { githubAPIEndpoint = e })
+
+githubAPITokenL :: Lens' OrgConfig (Maybe String)
+githubAPITokenL = lens githubAPIToken (\o t -> o { githubAPIToken = t })
+
+orgNameL :: Lens' OrgConfig String
+orgNameL = lens orgName (\o name -> o { orgName = name })
+
+ignoringReposL :: Lens' OrgConfig (Vector String)
+ignoringReposL = lens ignoringRepos (\o repos -> o { ignoringRepos = repos })

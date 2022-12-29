@@ -90,7 +90,7 @@ cloneSingleOrgConfig topDir maybeRepos orgConfig = do
   let orgDir = topDir </> topLevelName
 
   -- Get relative to current working dir
-  currDir <- liftIO $ getCurrentDirectory 
+  currDir <- liftIO getCurrentDirectory 
   let relativeOrgDir = makeRelative currDir orgDir
   logInfo $ displayShow relativeOrgDir
 
@@ -170,5 +170,4 @@ run :: RIO App ()
 run = do
   env <- ask
   let c = config env
-
   cloneConfigs (topLevelDir c) (orgConfigs (configFile c))

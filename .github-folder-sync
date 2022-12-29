@@ -1,7 +1,7 @@
 let orgConfigs = [
     { githubAPIEndpoint = None Text
-    , githubAPIToken = None Text
-    , orgName = "daniel-beard" 
+    , githubAPIToken = Some "$GITHUB_FOLDER_SYNC_TOKEN"
+    , orgName = "$GITHUB_FOLDER_SYNC_ORG_NAME" 
     , ignoringRepos = ["nothing"]
     } 
 ]

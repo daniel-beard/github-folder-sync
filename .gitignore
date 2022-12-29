@@ -8,3 +8,5 @@ folder-sync-old
 dist-newstyle/
 
 .DS_Store
+
+.github-folder-sync

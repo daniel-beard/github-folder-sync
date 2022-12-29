@@ -24,6 +24,12 @@ let orgConfigs = [
 in { orgConfigs }
 ```
 
+You can expand env vars within `githubAPIEndpoint`, `githubAPIToken`, `orgName` fields, like this:
+
+```
+githubAPIToken = Some "$GITHUB_FOLDER_SYNC_API_TOKEN"
+```
+
 - The api endpoint is assumed to point at `github.com` unless it contains a value.
 
 The type of the configuration is (`.github-folder-sync`):

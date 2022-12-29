@@ -25,7 +25,7 @@ main = do
   maybeConfig <- getConfig 
   case maybeConfig of
     Nothing -> error $ "Could not find config file. Make sure you have '" ++ configFileName ++ "' in the current dir, or any parent dir."
-    Just config -> do
+    Just parsedConfig -> do
       lo <- logOptionsHandle stderr (optionsVerbose options)
       pc <- mkDefaultProcessContext
       withLogFunc lo $ \lf ->
@@ -33,6 +33,6 @@ main = do
               { appLogFunc = lf
               , appProcessContext = pc
               , appOptions = options
-              , config = config
+              , config = parsedConfig 
               }
         in runRIO app run
