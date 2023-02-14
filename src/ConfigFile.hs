@@ -12,8 +12,9 @@ import RIO.Lens
 import RIO.List
 import qualified RIO.Text as T
 import System.Directory
-import System.Environment
+import System.Environment ( getEnvironment )
 import System.FilePath
+import Import (OrgConfig(orgAPIToken))
 
 -- Config File Env Var Parsing
 -----------------------------------------------------------------------------------
@@ -52,10 +53,10 @@ getConfig = do
           rawConfig <- detailed $ input auto $ T.pack file
           environment <- getEnvironment
           -- Expand env variables
+          let eachConfigL = orgConfigsL . traverse
           let transformedConfig = rawConfig 
-                      & (orgConfigsL . traverse . githubAPITokenL . _Just %~ expandEnvVar environment)
-                      & (orgConfigsL . traverse . githubAPIEndpointL . _Just %~ expandEnvVar environment)
-                      & ((orgConfigsL . traverse . orgNameL) %~ expandEnvVar environment)
+                      & (eachConfigL . orgAPITokenL . _Just %~ expandEnvVar environment)
+                      & (eachConfigL . orgNameL %~ expandEnvVar environment)
           return $ Just Config { configFile = transformedConfig, topLevelDir = configDirectory }
 
 -- Config file has 'package.json'-like resolution rules.

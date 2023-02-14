@@ -10,52 +10,31 @@ import qualified Data.Conduit.List as CL
 import qualified Data.ByteString as B
 import GitHub
 import RIO.Process
-import RIO.Text hiding (length, filter)
+import RIO.Text hiding (length, filter, map)
 import RIO.Directory
 import qualified RIO.Vector as V
 import System.FilePath
 
-getReposForUserOrOrgGithubCom :: (MonadReader env m,
-                                  MonadUnliftIO m,
-                                  HasLogFunc env) => String -> m (Maybe (Vector Repo))
-getReposForUserOrOrgGithubCom orgOrUser = do
-  -- This endpoint returns repos for either user or org, and has enough info that we can use it.
-  possibleRepos <- liftIO $ github' GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
-  case possibleRepos of
-    (Left err) -> do
-      logInfo $ displayShow err
-      return Nothing
-    (Right repos) -> return $ Just repos
-
-getReposForUserOrOrgGithubEnterprise :: (MonadReader env m,
-                                         MonadUnliftIO m,
-                                         HasLogFunc env) => String -> OrgConfig -> m (Maybe (Vector Repo))
-getReposForUserOrOrgGithubEnterprise orgOrUser orgConfig = do
-  -- This endpoint returns repos for either user or org, and has enough info that we can use it.
-  -- possibleRepos <- liftIO $ github' GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
+getReposForOrgGithubCom :: (MonadReader env m,
+                            MonadUnliftIO m,
+                            HasLogFunc env) => OrgConfig -> m (Maybe (Vector Repo))
+getReposForOrgGithubCom orgConfig = do
   possibleRepos <- liftIO $ github
-                  (GitHub.EnterpriseOAuth
-                    (fromString $ fromMaybe "" $ githubAPIEndpoint orgConfig)
-                    (fromString $ fromMaybe "" $ githubAPIToken orgConfig)
-                  ) GitHub.userReposR (mkOwnerName $ pack orgOrUser) GitHub.RepoPublicityAll FetchAll
+                            (GitHub.OAuth (fromString $ fromMaybe "" $ orgAPIToken orgConfig))
+                            GitHub.organizationReposR (mkOrganizationName $ pack (orgName orgConfig)) GitHub.RepoPublicityAll FetchAll
   case possibleRepos of
     (Left err) -> do
       logInfo $ displayShow err
       return Nothing
-    (Right repos) -> return $ Just repos
+    (Right repos) -> do
+      return $ Just repos
 
--- Call this one, it handles both github.com and GHE
 getReposForOrgConfig :: (MonadReader env m,
                          MonadUnliftIO m,
                          HasLogFunc env) => OrgConfig -> m (Maybe (Vector Repo), OrgConfig)
 getReposForOrgConfig orgConfig = do
-  case githubAPIEndpoint orgConfig of
-    Nothing -> do
-      repos <- getReposForUserOrOrgGithubCom (orgName orgConfig)
-      return (repos, orgConfig)
-    Just _ -> do
-      repos <- getReposForUserOrOrgGithubEnterprise (orgName orgConfig) orgConfig
-      return (repos, orgConfig)
+    repos <- getReposForOrgGithubCom orgConfig
+    return (repos, orgConfig)
 
 cloneSingleRepo :: (MonadReader env m,
                     MonadUnliftIO m,
@@ -90,7 +69,7 @@ cloneSingleOrgConfig topDir maybeRepos orgConfig = do
   let orgDir = topDir </> topLevelName
 
   -- Get relative to current working dir
-  currDir <- liftIO getCurrentDirectory 
+  currDir <- liftIO getCurrentDirectory
   let relativeOrgDir = makeRelative currDir orgDir
   logInfo $ displayShow relativeOrgDir
 
@@ -105,7 +84,7 @@ cloneSingleOrgConfig topDir maybeRepos orgConfig = do
                                   -- Owner login name /= orgName - like when a user is an owner of a repo in another org.
                                   && untagName (simpleOwnerLogin $ repoOwner r) == pack topLevelName
                                   -- Ignore list in config
-                                  && notElem (unpack (untagName $ repoName r)) (ignoringRepos orgConfig)
+                                  && notElem (unpack (untagName $ repoName r)) (ignoringOrgRepos orgConfig)
                                 ) repos''
 
       let indexedRepos = getZipSource $ (,)
@@ -165,9 +144,9 @@ cloneConfigs topDir orgConfigs' = do
 
   logSticky "All Done!!"
 
-
 run :: RIO App ()
 run = do
   env <- ask
   let c = config env
+  --TODODB: Re-add support for user repos if I need them
   cloneConfigs (topLevelDir c) (orgConfigs (configFile c))

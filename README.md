@@ -1,6 +1,6 @@
 # github-folder-sync
 
-An easy, fast way to clone many github repositories concurrently by org name, for `github.com` or `GitHub Enterprise`.
+An easy, fast way to clone many github repositories concurrently by org name, for `github.com`.
 
 ## Execute  
 
@@ -14,32 +14,36 @@ A minimal configuration looks like this:
 
 ```dhall
 let orgConfigs = [
-    { githubAPIEndpoint = None Text
-    , githubAPIToken = None Text
+    { orgAPIToken = None Text
     , orgName = "daniel-beard" 
-    , ignoringRepos = ["nothing"]
+    , ignoringOrgRepos = ["nothing"]
     } 
 ]
 
 in { orgConfigs }
 ```
 
-You can expand env vars within `githubAPIEndpoint`, `githubAPIToken`, `orgName` fields, like this:
+### Env vars
 
-```
-githubAPIToken = Some "$GITHUB_FOLDER_SYNC_API_TOKEN"
-```
-
-- The api endpoint is assumed to point at `github.com` unless it contains a value.
-
-The type of the configuration is (`.github-folder-sync`):
+It's possible to expand env vars within a `.github-folder-sync` file by either using the built-in Dhall way:
 
 ```dhall
-let OrgConfig : Type
-        = { githubAPIEndpoint : Optional Text
-          , githubAPIToken : Optional Text
-          , orgName : Text 
-          , ignoringRepos : List Text
-          }
-let orgConfigs : List OrgConfig = [...]
+let orgConfigs = [
+    { orgAPIToken = Some env:GITHUB_FOLDER_SYNC_API_TOKEN 
+    , orgName = "daniel-beard" 
+    , ignoringOrgRepos = ["nothing"]
+    } 
+]
+
+in { orgConfigs }
 ```
+
+github-folder-sync also supports a shorthand syntax within strings for the following fields: `githubAPIEndpoint`, `githubAPIToken`, `orgName` 
+
+```
+orgAPIToken = Some "$GITHUB_FOLDER_SYNC_API_TOKEN"
+```
+
+### API Endpoints
+
+- The api endpoint is assumed to point at `github.com` unless it contains a value.

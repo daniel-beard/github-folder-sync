@@ -1,9 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
+
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+
 module Types where
 
 import RIO
-import RIO.Process
+import RIO.Process ( HasProcessContext(..), ProcessContext )
 import Dhall (FromDhall)
 
 -- | Command line arguments
@@ -16,18 +20,25 @@ data Options = Options
 
 -- Sub configs that get loaded from the config file
 -- We assume that any config containing a githubAPIEndpoint value is Enterprise (for now)
+
+data UserConfig = UserConfig
+  { userName :: String
+  , userAPIToken :: Maybe String
+  , ignoringUserRepos :: Vector String
+  } deriving (Generic, Show)
+instance FromDhall UserConfig
+
 data OrgConfig = OrgConfig
-  { githubAPIEndpoint :: Maybe String 
-  , githubAPIToken :: Maybe String
-  , orgName :: String
-  , ignoringRepos :: Vector String
-  -- , folderNameOverride :: String
+  { orgName :: String
+  , orgAPIToken :: Maybe String
+  , ignoringOrgRepos :: Vector String
   } deriving (Generic, Show)
 instance FromDhall OrgConfig
 
 -- Top level ConfigFile contents
 data ConfigFile = ConfigFile
   { orgConfigs :: Vector OrgConfig
+  -- , userConfigs :: Vector UserConfig
   } deriving (Generic, Show)
 instance FromDhall ConfigFile
 
@@ -59,14 +70,11 @@ configFileL = lens configFile (\c cf -> c { configFile = cf })
 orgConfigsL :: Lens' ConfigFile (Vector OrgConfig)
 orgConfigsL = lens orgConfigs (\c n -> c { orgConfigs = n })
 
-githubAPIEndpointL :: Lens' OrgConfig (Maybe String)
-githubAPIEndpointL = lens githubAPIEndpoint (\o e -> o { githubAPIEndpoint = e })
-
-githubAPITokenL :: Lens' OrgConfig (Maybe String)
-githubAPITokenL = lens githubAPIToken (\o t -> o { githubAPIToken = t })
+orgAPITokenL :: Lens' OrgConfig (Maybe String)
+orgAPITokenL = lens orgAPIToken (\o t -> o { orgAPIToken = t })
 
 orgNameL :: Lens' OrgConfig String
 orgNameL = lens orgName (\o name -> o { orgName = name })
 
-ignoringReposL :: Lens' OrgConfig (Vector String)
-ignoringReposL = lens ignoringRepos (\o repos -> o { ignoringRepos = repos })
+ignoringOrgReposL :: Lens' OrgConfig (Vector String)
+ignoringOrgReposL = lens ignoringOrgRepos (\o repos -> o { ignoringOrgRepos = repos })

@@ -1,9 +1,10 @@
 let orgConfigs = [
-    { githubAPIEndpoint = None Text
-    , githubAPIToken = Some "$GITHUB_FOLDER_SYNC_TOKEN"
-    , orgName = "$GITHUB_FOLDER_SYNC_ORG_NAME" 
-    , ignoringRepos = ["nothing"]
+    { orgName = "$GITHUB_FOLDER_SYNC_ORG_NAME" 
+    , orgAPIToken = Some "$GITHUB_FOLDER_SYNC_PERSONAL_TOKEN"
+    , ignoringOrgRepos = ["nothing"]
     } 
 ]
 
-in { orgConfigs }
+in {  orgConfigs
+    -- , userConfigs = []
+   }
