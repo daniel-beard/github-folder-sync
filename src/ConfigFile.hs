@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-module ConfigFile (configFileName, getConfig) where
+module ConfigFile (defaultConfigFileName, getConfig) where
 
 import Data.Maybe
 import Dhall
@@ -10,11 +10,9 @@ import qualified Text.Megaparsec.Char as C
 import qualified Text.Megaparsec.Char.Lexer as L
 import RIO.Lens
 import RIO.List
-import qualified RIO.Text as T
 import System.Directory
 import System.Environment ( getEnvironment )
 import System.FilePath
-import Import (OrgConfig(orgAPIToken))
 
 -- Config File Env Var Parsing
 -----------------------------------------------------------------------------------
@@ -40,40 +38,39 @@ expandEnvVar environment inputString = do
               Just l -> snd l
           LiteralEntry l -> l
 
-configFileName :: FilePath
-configFileName = ".github-folder-sync"
+defaultConfigFileName :: FilePath
+defaultConfigFileName = ".github-folder-sync"
 
-getConfig :: IO (Maybe Config)
-getConfig = do
-    maybeConfigFile <- findConfigFile
-    case maybeConfigFile of
+workingDirConfigFilePath :: IO FilePath
+workingDirConfigFilePath = do
+  pwd <- getCurrentDirectory
+  return $ pwd </> defaultConfigFileName
+
+-- Config path resolution is either:
+-- - A passed in app option
+-- - .github-folder-sync in the current directory
+-- In that order, we use the first that exists
+getConfig :: Maybe FilePath -> IO (Maybe Config)
+getConfig configFileAppOption = do
+    configFileInPWD <- workingDirConfigFilePath
+    configFilesThatExist <- filterM doesFileExist $ catMaybes [configFileAppOption <|> Just configFileInPWD]
+    let firstConfigFileThatExists = listToMaybe configFilesThatExist
+
+    case firstConfigFileThatExists of
         Nothing -> return Nothing
         Just file -> do
-          let configDirectory = takeDirectory  file
-          rawConfig <- detailed $ input auto $ T.pack file
+          let dhallTypeDefs = dhallOrgConfigType <> "\n" <> dhallUserConfigType <> "\n"
+          fileContent <- readFileUtf8 file
+          rawConfig <- detailed $ input auto $ dhallTypeDefs <> fileContent
           environment <- getEnvironment
-          -- Expand env variables
-          let eachConfigL = orgConfigsL . traverse
-          let transformedConfig = rawConfig 
-                      & (eachConfigL . orgAPITokenL . _Just %~ expandEnvVar environment)
-                      & (eachConfigL . orgNameL %~ expandEnvVar environment)
-          return $ Just Config { configFile = transformedConfig, topLevelDir = configDirectory }
 
--- Config file has 'package.json'-like resolution rules.
--- i.e. we traverse up directories until we find a config file, starting from working directory
-findConfigFile :: (MonadUnliftIO m) => m (Maybe FilePath)
-findConfigFile = do
-  currDir <- liftIO getCurrentDirectory
-  path' <- liftIO $ canonicalizePath currDir
-  let mkPaths p
-        | all isPathSeparator p || p == "." = []
-        | otherwise = (p </> configFileName) : mkPaths (takeDirectory p)
-  liftIO $ firstMaybeConfigFile $ mkPaths path'
-  where firstMaybeConfigFile :: [FilePath] -> IO (Maybe FilePath)
-        firstMaybeConfigFile [] = return Nothing
-        firstMaybeConfigFile [x] = do
-          exists <- doesFileExist x
-          if exists then return $ Just x else return Nothing
-        firstMaybeConfigFile (x:xs) = do
-          exists <- doesFileExist x
-          if exists then return $ Just x else firstMaybeConfigFile xs
+          -- Expand env variables
+          let eachOrgConfigL = orgConfigsL . traverse
+          let eachUserConfigL = userConfigsL . traverse
+          let transformedConfig = rawConfig 
+                      & (eachOrgConfigL . orgAPITokenL . _Just %~ expandEnvVar environment)
+                      & (eachOrgConfigL . orgNameL %~ expandEnvVar environment)
+                      & (eachUserConfigL . userNameL %~ expandEnvVar environment)
+                      & (eachUserConfigL . userAPITokenL . _Just %~ expandEnvVar environment)
+          return $ Just Config { configFile = transformedConfig, configFilePath = file }
+
