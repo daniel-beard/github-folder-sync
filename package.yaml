@@ -27,6 +27,8 @@ dependencies:
 - conduit-extra
 - dhall
 - directory
+- either
+- errors
 - filepath
 - github
 - megaparsec

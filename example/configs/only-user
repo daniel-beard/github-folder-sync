@@ -1,0 +1,11 @@
+let userConfigs = [
+    { userName = "$GITHUB_FOLDER_SYNC_USER_NAME"
+    , userAPIToken = Some "$GITHUB_FOLDER_SYNC_PERSONAL_TOKEN"
+    , ignoringUserRepos = ["nothing"]
+    }
+]
+
+in { orgConfigs = [] : List OrgConfig
+   , userConfigs = userConfigs
+   }
+

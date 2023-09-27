@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -26,6 +26,9 @@ source-repository head
 library
   exposed-modules:
       ConfigFile
+      GithubOrg
+      GithubShared
+      GithubUser
       Import
       Run
       Types
@@ -42,6 +45,8 @@ library
     , conduit-extra
     , dhall
     , directory
+    , either
+    , errors
     , filepath
     , github
     , megaparsec
@@ -63,6 +68,8 @@ executable github-folder-sync-exe
     , conduit-extra
     , dhall
     , directory
+    , either
+    , errors
     , filepath
     , github
     , github-folder-sync
@@ -87,6 +94,8 @@ test-suite github-folder-sync-test
     , conduit-extra
     , dhall
     , directory
+    , either
+    , errors
     , filepath
     , github
     , github-folder-sync

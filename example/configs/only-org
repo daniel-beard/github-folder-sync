@@ -1,6 +1,6 @@
 let orgConfigs = [
-    { orgName = "dbeardorg" 
-    , orgAPIToken = None Text
+    { orgName = "$GITHUB_FOLDER_SYNC_ORG_NAME" 
+    , orgAPIToken = Some "$GITHUB_FOLDER_SYNC_PERSONAL_TOKEN"
     , ignoringOrgRepos = ["nothing"]
     } 
 ]

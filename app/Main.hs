@@ -2,12 +2,32 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Main (main) where
 
+import ConfigFile (defaultConfigFileName)
 import Import
 import Options.Applicative.Simple
-import ConfigFile
 import Run
 import RIO.Process
 import qualified Paths_github_folder_sync
+
+optVerbose :: Parser Bool
+optVerbose = switch ( long "verbose"
+                  <> short 'v'
+                  <> help "Verbose output?"
+                  )
+
+optConfigFile :: Parser (Maybe String)
+optConfigFile = optional $ strOption ( long "config-file"
+                  <> short 'c'
+                  <> metavar "CONFIGFILE"
+                  <> help ("Specify a CONFIGFILE path. Default is ./" <> defaultConfigFileName)
+                  )
+
+optOutputDir :: Parser (Maybe String)
+optOutputDir = optional $ strOption ( long "output-dir"
+                  <> short 'o'
+                  <> metavar "OUTPUTDIR"
+                  <> help "Specify an output directory. Default is PWD"
+                  )
 
 main :: IO ()
 main = do
@@ -16,23 +36,16 @@ main = do
     $(simpleVersion Paths_github_folder_sync.version)
     "github-folder-sync"
     "Sync repos and orgs from github to folder structures"
-    (Options <$> switch ( long "verbose"
-                 <> short 'v'
-                 <> help "Verbose output?"
-                  )
+    (Options <$> optVerbose <*> optConfigFile <*> optOutputDir
     )
     empty
-  maybeConfig <- getConfig 
-  case maybeConfig of
-    Nothing -> error $ "Could not find config file. Make sure you have '" ++ configFileName ++ "' in the current dir, or any parent dir."
-    Just parsedConfig -> do
-      lo <- logOptionsHandle stderr (optionsVerbose options)
-      pc <- mkDefaultProcessContext
-      withLogFunc lo $ \lf ->
-        let app = App
-              { appLogFunc = lf
-              , appProcessContext = pc
-              , appOptions = options
-              , config = parsedConfig 
-              }
-        in runRIO app run
+
+  lo <- logOptionsHandle stderr (optionsVerbose options)
+  pc <- mkDefaultProcessContext
+  withLogFunc lo $ \lf ->
+    let app = App
+          { appLogFunc = lf
+          , appProcessContext = pc
+          , appOptions = options
+          }
+    in runRIO app run

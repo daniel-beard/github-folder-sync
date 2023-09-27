@@ -8,8 +8,7 @@ An easy, fast way to clone many github repositories concurrently by org name, fo
 
 ## Config
 
-The configuration is specified as a [Dhall](https://learnxinyminutes.com/docs/dhall/) configuration file named `.github-folder-sync`. The config resolution works much the same way as npm `package.json` resolution does, i.e. we check the current folder, then traverse up each path component until we find a config file.
-
+The configuration is specified as a [Dhall](https://learnxinyminutes.com/docs/dhall/) configuration file named `.github-folder-sync`. Either have the config in the current working directory, or override it using: `github-folder-sync --config-file /tmp/adifferentconfig`.
 A minimal configuration looks like this:
 
 ```dhall
@@ -38,12 +37,18 @@ let orgConfigs = [
 in { orgConfigs }
 ```
 
-github-folder-sync also supports a shorthand syntax within strings for the following fields: `githubAPIEndpoint`, `githubAPIToken`, `orgName` 
+github-folder-sync also supports a shorthand syntax within strings for the following fields: 
 
 ```
+- orgAPIToken 
+- orgName
+- userName
+- userAPIToken
+```
+
+For example:
+
+```dhall
 orgAPIToken = Some "$GITHUB_FOLDER_SYNC_API_TOKEN"
 ```
 
-### API Endpoints
-
-- The api endpoint is assumed to point at `github.com` unless it contains a value.
